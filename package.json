@@ -1,0 +1,16 @@
+{
+  "name": "tiasa-checker-webhook",
+  "version": "0.0.1",
+  "description": "Just testing to build up webhook",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.1",
+    "moment": "^2.18.1",
+    "request": "^2.81.0"
+  },
+  "author": "Ackerley Tng",
+  "license": "MIT"
+}
