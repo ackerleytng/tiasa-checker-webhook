@@ -17,34 +17,60 @@ const isReasonableTime = function(time) {
 
 const getTimes = function(reply) {
     const $ = cheerio.load(reply);
-    var data = $('a').map(function(i, e) { return $(this).text() }).get();
-    data = data.filter(isReasonableTime)
-    return data;
+    return $('a').map(function(i, e) { return $(this).text() }).get()
+        .filter(isReasonableTime);
 }
 
 const makeStringFromTimes = function(times) {
-    if (times.length == 0) {
+    var timeslots = [];
+
+    for (var time in times) {
+        timeslots.push([time, times[time]]);
+    }
+
+    if (timeslots.length == 0) {
         return "No available slots.";
     } else {
-        return times.map(function(e) { return `+ ${e}`}).join('\n');
+        return timeslots.sort(function(a, b) {
+            function convert(string) {
+                return moment(`2000-01-01 ${string}`, 'YYYY-MM-DD h:mm a');
+            }
+            return convert(a).diff(convert(b));
+        })
+            .map(function(e) { return [e[0], e[1].map(function (x) { return `Court ${x}`; }).join(', ')]; })
+            .map(function(e) { return `+ ${e[0]}: ${e[1]}`; })
+            .join('\n');
     }
 }
 
 const askTiasa = function(date) {
+    function buildData(date, court) {
+        const representation = {
+            1: 133,
+            2: 151
+        }
     
-    var dataString = `wc_bookings_field_duration=2&wc_bookings_field_start_date_year=${date.format('YYYY')}&wc_bookings_field_start_date_month=${date.format('MM')}&wc_bookings_field_start_date_day=${date.format('DD')}&wc_bookings_field_start_date_time=&addon-133-stick-rental%5Baddons-total%5D=&add-to-cart=133`;
+        const dataString = `wc_bookings_field_duration=2&wc_bookings_field_start_date_year=${date.format('YYYY')}&wc_bookings_field_start_date_month=${date.format('MM')}&wc_bookings_field_start_date_day=${date.format('DD')}&wc_bookings_field_start_date_time=&addon-${representation[court]}-stick-rental%5Baddons-total%5D=&add-to-cart=${representation[court]}`;
 
-    var data = {
-        'action': 'wc_bookings_get_blocks',
-        'form': dataString
-    };
-    
+        return {
+            'action': 'wc_bookings_get_blocks',
+            'form': dataString
+        };
+    }
+
     var url = 'http://www.tiasafloorball.com/wp-admin/admin-ajax.php';
 
-    function callback(error, response, body) {
+    var times = {};
+
+    function callbackCourt2(error, response, body) {
         if (!error && response.statusCode == 200) {
-            // console.log(body);
-            const times = getTimes(body);
+            getTimes(body).forEach(function(e, i) {
+                if (e in times) {
+                    times[e].push(2);
+                } else {
+                    times[e] = [2];
+                }
+            });
             
             const day = date.format('dddd, MMMM Do YYYY');
             const timesString = makeStringFromTimes(times);
@@ -52,8 +78,18 @@ const askTiasa = function(date) {
             console.log(message);
         }
     }
-
-    request.post(url, callback).form(data);
+    
+    function callbackCourt1(error, response, body) {
+        if (!error && response.statusCode == 200) {
+            getTimes(body).forEach(function(e, i) {
+                times[e] = [1];
+            });
+            
+            request.post(url, callbackCourt2).form(buildData(date, 2));
+        }
+    }
+    
+    request.post(url, callbackCourt1).form(buildData(date, 1));
 }
 
 console.log('Checking for slots between 10am and 10pm this weekend...');
