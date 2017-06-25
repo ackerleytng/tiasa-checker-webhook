@@ -221,12 +221,17 @@ const handleRequest = function(ctx, chat, request) {
 }
 
 module.exports = function(ctx, cb) {
-    if (ctx.data.message === undefined) {
+    const data = ctx.data
+
+    if (data.message === undefined && data.edited_message === undefined) {
+        console.log(data)
+        cb(null, {status: 'message undefined'})
         return
     }
-
-    var command = ctx.data.message.text
-    var chat = ctx.data.message.chat.id
+    
+    const message = (data.message ? data.message : data.edited_message)
+    const command = message.text
+    const chat = message.chat.id
     
     console.log(`Saw ${command} from ${chat}`)
     
