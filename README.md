@@ -14,6 +14,34 @@ Go to the project directory, and do
 yarn install
 ```
 
+# Commands
+
+These commands should do what you expect it to do: 
+
+(non-exhaustive list, but you get the idea)
+
++ `/check` (Checks for next weekend)
++ `/check this weekend`
++ `/check coming weekend`
++ `/check next weekend`
++ `/check next next weekend`
++ `/check next monday`
++ `/check next tue`
++ `/check this wed`
++ `/check coming thursday`
++ `/check 1st`
++ `/check 30`
++ `/check today`
++ `/check tomorrow`
++ `/check day after`
+
+If you used a command and the bot didn't give you a satisfactory response, please let me know
+
++ The command you used
++ The date you ran the command
++ What the response was
++ What you thought the response should be
+
 # Usage
 
 If you want to just ping http://www.tiasafloorball.com/ with node, try
@@ -41,7 +69,6 @@ Most useful command from here on (probably)
 ```
 wt update tiasa-checker-webhook webtask.js
 ```
-
 
 # Credits
 
