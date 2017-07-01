@@ -223,24 +223,26 @@ const handleRequest = function(ctx, chat, request) {
 module.exports = function(ctx, cb) {
     const data = ctx.data
 
-    if (data.message === undefined && data.edited_message === undefined) {
+    var command
+    var chat
+    
+    if (data.message !== undefined) {
+        command = data.message.text
+        chat = data.message.chat.id
+    } else if (data.edited_message !== undefined) {
+        command = data.edited_message.text
+        chat = data.edited_message.chat.id
+    } else {
         console.log(data)
         cb(null, {status: 'message undefined'})
         return
     }
     
-    const message = (data.message ? data.message : data.edited_message)
-    const command = message.text
-    const chat = message.chat.id
+    console.log(`Saw |${command}| from ${chat}`)
     
-    console.log(`Saw ${command} from ${chat}`)
-    
-    // intercept command /check
-    if (command !== undefined && command.lastIndexOf('/check', 0) === 0) {
-        const input = command.replace('/check', '')
-        
-        handleRequest(ctx, chat, input)
-    }
+    // Remove the prefix if necessary. This removes /check and /check@whatever_till_end_of_word
+    const input = command.replace(/\/check[@a-zA-Z_]*([^@a-zA-Z_]|$)/, '')
+    handleRequest(ctx, chat, input)
     
     cb(null, {status: 'ok'})
 }
