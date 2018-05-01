@@ -47,7 +47,72 @@ If you used a command and the bot didn't give you a satisfactory response, pleas
 If you want to just ping http://www.tiasafloorball.com/ with node, try
 
 ```
-./main.js
+./main.js /check
+```
+
+If you want to test the webhook by posting to it, use [httpie](https://httpie.org/) while watching the logs.
+
+Do
+
+```
+wt logs
+```
+
+in one terminal window, and then
+
+```
+http -j POST https://wt-ed91a750cc644b077ae35f82e3324df2-0.sandbox.auth0-extend.com/tiasa-checker-webhook @httpie.json
+```
+
+(this uses the webhook I registered for this telegram bot) in another.
+
+You should see something like this:
+
+```
+[13:58:39.819Z]  INFO wt: new webtask request 1525183119621.327407
+[13:58:40.161Z]  INFO wt:
+    Saw |/check| from 00000000
+    Checking for slots for this weekend...
+[13:58:40.176Z]  INFO wt: finished webtask request 1525183119621.327407 with HTTP 200 in 436ms
+[13:58:43.299Z]  INFO wt:
+    Saturday, May 5th 2018:
+    + 11:30 am: Court 2
+    + 1:00 pm: Court 2
+    + 1:30 pm: Court 2
+    + 2:00 pm: Court 1, Court 2
+    + 2:30 pm: Court 1, Court 2
+    + 3:00 pm: Court 1, Court 2
+    + 3:30 pm: Court 1
+    + 4:00 pm: Court 1
+    + 4:30 pm: Court 1
+    + 5:00 pm: Court 1
+    + 5:30 pm: Court 1
+    + 6:00 pm: Court 1, Court 2
+    + 6:30 pm: Court 1, Court 2
+    + 7:00 pm: Court 1, Court 2
+    + 7:30 pm: Court 1, Court 2
+    + 8:00 pm: Court 1, Court 2
+    + 8:30 pm: Court 1, Court 2
+    + 9:00 pm: Court 1, Court 2
+    + 9:30 pm: Court 1, Court 2
+[13:58:44.323Z]  INFO wt:
+    Sunday, May 6th 2018:
+    + 1:30 pm: Court 1
+    + 2:00 pm: Court 1
+    + 2:30 pm: Court 1
+    + 3:00 pm: Court 1
+    + 4:00 pm: Court 2
+    + 4:30 pm: Court 2
+    + 5:00 pm: Court 2
+    + 5:30 pm: Court 2
+    + 6:00 pm: Court 1, Court 2
+    + 6:30 pm: Court 1, Court 2
+    + 7:00 pm: Court 1, Court 2
+    + 7:30 pm: Court 1, Court 2
+    + 8:00 pm: Court 1, Court 2
+    + 8:30 pm: Court 1, Court 2
+    + 9:00 pm: Court 1, Court 2
+    + 9:30 pm: Court 1, Court 2
 ```
 
 # Full Setup

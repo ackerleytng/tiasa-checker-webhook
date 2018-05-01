@@ -1,0 +1,9 @@
+{
+  "message": {
+    "text": "/check",
+    "chat": {
+      "id": "00000000"
+    }
+  },
+  "isCli": true
+}
