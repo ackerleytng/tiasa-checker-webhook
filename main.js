@@ -23,9 +23,9 @@ const ctx = {
       "chat": {
         "id": "00000000"
       }
-    }
-  },
-  "isCli": true
+    },
+    "isCli": true
+  }
 }
 
 webtask(ctx, callback)

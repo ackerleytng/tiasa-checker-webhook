@@ -7,7 +7,7 @@ const getBaseUrl = function(ctx) {
 }
 
 const sendMessage = function(ctx, chatId, message) {
-  if (ctx.isCli) {
+  if (ctx.data.isCli) {
     console.log(message)
   } else {
     request.post(`${getBaseUrl(ctx)}sendMessage`, {
