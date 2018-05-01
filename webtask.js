@@ -7,12 +7,16 @@ const getBaseUrl = function(ctx) {
 }
 
 const sendMessage = function(ctx, chatId, message) {
-  request.post(`${getBaseUrl(ctx)}sendMessage`, {
-    form: {
-      'chat_id': chatId,
-      'text': message
-    }
-  })
+  if (ctx.isCli) {
+    console.log(message)
+  } else {
+    request.post(`${getBaseUrl(ctx)}sendMessage`, {
+      form: {
+        'chat_id': chatId,
+        'text': message
+      }
+    })
+  }
 }
 
 const isReasonableTime = function(time) {
@@ -58,7 +62,7 @@ const makeStringFromTimes = function(times) {
 
 const askTiasa = function(ctx, chat, date) {
   if (date === undefined) {
-    console.trace("date is undefined")
+    console.log("date is undefined")
     return
   }
   
