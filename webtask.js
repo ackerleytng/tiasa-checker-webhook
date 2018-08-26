@@ -226,19 +226,19 @@ const handleRequest = function (ctx, chat, request) {
 }
 
 module.exports = function (ctx, cb) {
-  const data = ctx.data
+  const body = ctx.body
 
   var command
   var chat
 
-  if (data.message !== undefined) {
-    command = data.message.text
-    chat = data.message.chat.id
-  } else if (data.edited_message !== undefined) {
-    command = data.edited_message.text
-    chat = data.edited_message.chat.id
+  if (body.message !== undefined) {
+    command = body.message.text
+    chat = body.message.chat.id
+  } else if (body.edited_message !== undefined) {
+    command = body.edited_message.text
+    chat = body.edited_message.chat.id
   } else {
-    console.log(data)
+    console.log(body)
     cb(null, {status: 'message undefined'})
     return
   }
