@@ -17,14 +17,14 @@ const callback = function (_, output) {
 }
 
 const ctx = {
-  'data': {
-    'message': {
-      'text': command,
-      'chat': {
-        'id': '00000000'
+  body: {
+    message: {
+      text: command,
+      chat: {
+        id: '00000000'
       }
     },
-    'isCli': true
+    isCli: true
   }
 }
 

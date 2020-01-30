@@ -1,117 +1,183 @@
-const request = require('request')
-const moment = require('moment')
+const axios = require('axios')
+const querystring = require('querystring')
+const moment = require('moment-timezone')
 const cheerio = require('cheerio')
+
+// ---------------------------------------
+//  Telegram-related functions
+// ---------------------------------------
 
 const getBaseUrl = function (ctx) {
   return `https://api.telegram.org/bot${ctx.secrets.botApiKey}/`
 }
 
 const sendMessage = function (ctx, chatId, message) {
-  if (ctx.data.isCli) {
+  if (ctx.body.isCli) {
     console.log(message)
   } else {
-    request.post(`${getBaseUrl(ctx)}sendMessage`, {
-      form: {
-        'chat_id': chatId,
-        'text': message
-      }
-    })
+    axios.post(
+      `${getBaseUrl(ctx)}sendMessage`,
+      querystring.stringify({
+        chat_id: chatId,
+        text: message
+      })
+    )
   }
 }
 
-const isReasonableTime = function (time) {
-  if (time.includes('am')) {
-    const t = parseInt(time)
-    return t >= 10 && t !== 12
-  } else if (time.includes('pm')) {
-    // 9 because 9:30 is the last slot beginning before 10 pm
-    return parseInt(time) <= 9
-  } else {
-    return false
+// ---------------------------------------
+//  valhall query functions
+// ---------------------------------------
+
+const union = (setA, setB) => {
+    let _union = new Set(setA)
+    for (let elem of setB) {
+        _union.add(elem)
+    }
+    return _union
+}
+
+const extractAuthorization = (body) => {
+  const $ = cheerio.load(body);
+  const instances = $('iframe').map(function (i, f) { return $(this).attr('data-src') });
+  const indices = Object.keys(instances).filter((i) => !isNaN(parseInt(i, 10)));
+
+  for (i in indices) {
+    if (instances[i].startsWith('https://bookings.wixapps.net')) {
+      const kvs = instances[i].split('&');
+      const m = new Map(kvs.map((v) => v.split('=')));
+
+      return m.get('instance');
+    }
+  }
+
+  return null;
+}
+
+const uuids = {
+  court1: {
+    offPeak: '91021a5a-a738-42a3-88c1-94545f07ee34',
+    peak: 'fc2a234c-02a2-4bce-9323-78bcd72ec02a',
+  },
+  court2: {
+    offPeak: '087089fd-bf3a-466d-b3cc-d05bceaf8371',
+    peak: 'd8342232-bd73-4b69-8400-b9ebb040c40e',
   }
 }
 
-const getTimes = function (reply) {
-  const $ = cheerio.load(reply)
-  return $('a').map(function (i, e) { return $(this).text() }).get()
-    .filter(isReasonableTime)
+/**
+ * Makes a single request, given the uuid of the booking page, and a unix timestamp
+ *
+ * token: token, from getAuthorizationToken
+ * uuid: uuid of the booking page
+ * unixTime: unix timestamp
+ */
+const request = async (token, uuid, unixTime) => {
+  const addr = `https://bookings.wixapps.net/_api/bookings-viewer/visitor/staff/slots/${uuid}/${unixTime}/${unixTime}?tz=Asia/Singapore`
+
+  return await axios(addr, { headers: { authorization: token } }).then((res) => res.data)
 }
 
-const makeStringFromTimes = function (times) {
-  var timeslots = []
+/**
+ * Given data in wix's format, return an array of moment objects
+ */
+const getTimes = (data) => {
+  const slotsValues = Object.values(data['slots']);
 
-  for (var time in times) {
-    timeslots.push([time, times[time]])
+  if (slotsValues.length === 0) {
+    return [];
   }
 
-  if (timeslots.length === 0) {
-    return 'No available slots.'
-  } else {
-    return timeslots.sort(function (a, b) {
-      function convert (string) {
-        return moment(`2000-01-01 ${string}`, 'YYYY-MM-DD h:mm a')
-      }
-      return convert(a).diff(convert(b))
-    })
-      .map(e => [e[0], e[1].map(x => `Court ${x}`).join(', ')])
-      .map(e => `+ ${e[0]}: ${e[1]}`)
-      .join('\n')
-  }
+  const tsSet = slotsValues[0]
+        .map((o) => o['slots'])
+        .reduce(union, new Set());
+
+  return Array.from(tsSet).map((t) => moment(t));
 }
 
-const askTiasa = function (ctx, chat, date) {
+/**
+ * Gets an authorization token for further queries
+ *   Use peak-weekend-for-court-1 just to get the authorization information.
+ *   Same token can be used for querying other courts and for both peak and off peak
+ */
+const getAuthorizationToken = () => axios
+      .get('https://www.valhall.asia/bookings-checkout/peak-weekend-for-court-1/book')
+      .then((r) => extractAuthorization(r.data));
+
+/**
+ * Queries website for a single day's availability
+ *   Returns an array of moment objects
+ * token: the token to access the website, from getAuthorizationToken()
+ * court: either 'court1' or 'court2'
+ * timestamp: a unix timestamp for the day we're interested in
+ */
+const queryDayCourt = async (token, court, timestamp) => {
+  const data = await Promise.all(Object.values(uuids[court]).map((u) => request(token, u, timestamp)));
+  const flattened = [].concat(...data.map(getTimes));
+
+  // Remove duplicates by timestamp
+  return Array.from(new Map(flattened.map((m) => [m.format('x'), m])).values());
+}
+
+const queryDay = (token, timestamp) => Promise.all([
+  queryDayCourt(token, 'court1', timestamp),
+  queryDayCourt(token, 'court2', timestamp)
+]);
+
+// ---------------------------------------
+//  Output formatting functions
+// ---------------------------------------
+
+const makeTimeslotsString = ([court1Timings, court2Timings]) => {
+  // Use ISO String to merge maps
+  //   because if it's a moment, then we have to deal with object equality
+  const timeslots = new Map(court1Timings.map((m) => [m.toISOString(), [1]]));
+
+  // Add court 2 availability
+  for (const m of court2Timings) {
+    const ts = m.toISOString();
+    const v = timeslots.get(ts);
+    if (v) {
+      v.push(2)
+    } else {
+      timeslots.set(ts, [2])
+    }
+  }
+
+  return Array.from(timeslots.entries())
+    .sort((a, b) => moment(a[0]).diff(moment(b[0])))
+    .map(e => [moment(e[0]).tz('Asia/Singapore').format('hh:mm a'),
+               e[1].map(x => `Court ${x}`).join(', ')])
+    .map(e => `+ ${e[0]}: ${e[1]}`)
+    .join('\n')
+}
+
+const makeMessage = (reqDate, timings) => {
+  const timeslotString = makeTimeslotsString(timings);
+  const day = reqDate.format('dddd, MMMM Do YYYY')
+  return `${day}:\n${timeslotString}`
+}
+
+// ---------------------------------------
+//  Main asking function
+// ---------------------------------------
+
+const askTiasa = async function (ctx, chat, date) {
   if (date === undefined) {
     console.log('date is undefined')
     return
   }
 
-  function buildData (date, court) {
-    const representation = {
-      1: 133,
-      2: 151
-    }
+  const token = await getAuthorizationToken();
+  const timeslots = await queryDay(token, date.format('x'));
+  const message = makeMessage(date, timeslots);
 
-    const dataString = `wc_bookings_field_duration=2&wc_bookings_field_start_date_year=${date.format('YYYY')}&wc_bookings_field_start_date_month=${date.format('MM')}&wc_bookings_field_start_date_day=${date.format('DD')}&wc_bookings_field_start_date_time=&addon-${representation[court]}-stick-rental%5Baddons-total%5D=&add-to-cart=${representation[court]}`
-
-    return {
-      'action': 'wc_bookings_get_blocks',
-      'form': dataString
-    }
-  }
-
-  var url = 'http://www.tiasafloorball.com/wp-admin/admin-ajax.php'
-
-  var times = {}
-
-  function callbackCourt2 (error, response, body) {
-    if (!error && response.statusCode === 200) {
-      getTimes(body).forEach(function (e, i) {
-        if (e in times) {
-          times[e].push(2)
-        } else {
-          times[e] = [2]
-        }
-      })
-
-      const day = date.format('dddd, MMMM Do YYYY')
-      const timesString = makeStringFromTimes(times)
-      const message = `${day}:\n${timesString}`
-      sendMessage(ctx, chat, message)
-    }
-  }
-
-  function callbackCourt1 (error, response, body) {
-    if (!error && response.statusCode === 200) {
-      getTimes(body).forEach(function (e, i) {
-        times[e] = [1]
-      })
-
-      request.post(url, callbackCourt2).form(buildData(date, 2))
-    }
-  }
-
-  request.post(url, callbackCourt1).form(buildData(date, 1))
+  sendMessage(ctx, chat, message);
 }
+
+// ---------------------------------------
+//  Input parsing functions
+// ---------------------------------------
 
 /**
  * Given a request, identifies and returns the first word that contains anything that
