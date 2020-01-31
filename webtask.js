@@ -309,6 +309,10 @@ module.exports = function (ctx, cb) {
     return
   }
 
+  if (!command) {
+    return
+  }
+
   console.log(`Saw |${command}| from ${chat}`)
 
   // Remove the prefix if necessary. This removes /check and /check@whatever_till_end_of_word
