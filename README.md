@@ -1,22 +1,14 @@
 # tiasa-checker Telegram Bot
 
-Check availability of the floorball court this weekend on http://www.tiasafloorball.com/!
+Check availability of the floorball court this weekend on http://www.valhall.asia/!
 
 I'm running this on https://webtask.io/. Thank you so much, webtask! :)
 
 Add this bot at https://t.me/tiasa_checker_bot!
 
-# Setting up
+## Commands
 
-Go to the project directory, and do
-
-```
-yarn install
-```
-
-# Commands
-
-These commands should do what you expect it to do: 
+These commands should do what you expect it to do:
 
 (non-exhaustive list, but you get the idea)
 
@@ -42,9 +34,17 @@ If you used a command and the bot didn't give you a satisfactory response, pleas
 + What the response was
 + What you thought the response should be
 
-# Usage
+## Development
 
-If you want to just ping http://www.tiasafloorball.com/ with node, try
+Go to the project directory, and do
+
+```
+yarn install
+```
+
+## Exercising the bot
+
+If you want to exercise bot code without going through telegram, do
 
 ```
 ./main.js /check
@@ -115,7 +115,15 @@ You should see something like this:
     + 9:30 pm: Court 1, Court 2
 ```
 
-# Full Setup
+## Deployment
+
+It seems like using `wt update` causes the secrets to be erased, so use this instead:
+
+```
+wt create --name tiasa-checker-webhook --secret botApiKey=<bot api key goes here> webtask.js
+```
+
+## Full Setup
 
 If you'd like to create a bot, you'd have to go to the BotFather and ask for an API token.
 
@@ -125,14 +133,6 @@ After setting up with webtask, notify telegram with
 
 ```
 curl -X POST -H "Content-Type: multipart/form-data" -F "url=<the webtask url>" 'https://api.telegram.org/bot<your bot api token>/setWebhook'
-```
-
-I used the webui to configure my bot's API token, accessed using `ctx.secrets.botApikey`.
-
-Most useful command from here on (probably)
-
-```
-wt update tiasa-checker-webhook webtask.js
 ```
 
 # Credits
